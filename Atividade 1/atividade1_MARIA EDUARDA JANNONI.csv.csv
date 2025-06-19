@@ -1,0 +1,16 @@
+site,data,latitude,longitude,amostra,especie,sepal length (cm),sepal width (cm),petal length (cm),petal width (cm),fichas_de_campo
+site1,1929-12-01,48.935966,-64.840984,A99,iris_versicolor,5.1,2.5,3.0,1.1,A67.pdf
+site1,1929-12-01,48.935966,-64.840984,A48,iris_setosa,4.6,3.2,1.4,0.2,A11.pdf
+site1,1929-12-01,48.935966,-64.840984,A141,iris_virginica,6.7,3.1,5.6,2.4,A114.pdf
+site1,1929-12-01,48.935966,-64.840984,A102,iris_virginica,5.8,2.7,5.1,1.9,A101.pdf
+site1,1929-12-01,48.935966,-64.840984,A24,iris_setosa,5.1,3.3,1.7,0.5,A3.pdf
+site1,1929-12-01,48.935966,-64.840984,A45,iris_setosa,5.1,3.8,1.7,0.4,A10.pdf
+site2,1930-02-19,48.540502,-64.766512,A119,iris_virginica,7.7,2.6,6.9,2.3,A124.pdf
+site2,1930-02-13,48.540502,-64.766512,A14,iris_setosa,4.3,3.0,1.1,0.1,A33.pdf
+site2,1930-02-13,48.540502,-64.766512,A107,iris_virginica,4.9,2.5,4.5,1.7,A120.pdf
+site2,1930-02-13,48.540502,-64.766512,A35,iris_setosa,4.9,3.1,1.5,0.2,A23.pdf
+site2,1930-02-13,48.540502,-64.766512,A146,iris_virginica,6.7,3.0,5.2,2.3,A133.pdf
+site3,1929-12-01,48.329837,-65.512333,A118,iris_virginica,7.7,3.8,6.7,2.2,A140.pdf
+site3,1929-12-01,48.329837,-65.512333,A46,iris_setosa,4.8,3.0,1.4,0.3,A43.pdf
+site3,1929-12-01,48.329837,-65.512333,A139,iris_virginica,6.0,3.0,4.8,1.8,A147.pdf
+site3,1929-12-01,48.329837,-65.512333,A142,iris_virginica,6.9,3.1,5.1,2.3,A148.pdf

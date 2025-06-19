@@ -1,0 +1,275 @@
+---
+title: "atividade4"
+author: "Maria Eduarda Jannoni_atividade4"
+date: "2025-06-04"
+output: html_document
+---
+#Introdução
+
+A Fotoidentificação (foto-ID) é um método em que a identificação dos 
+indivíduos ocorre através de características e marcas naturais do corpo do animal, e é feita através de fotografias ou vídeos (Schofield et al., 2008). Através da identificação de indivíduos dentro de uma população, é possível estudar as taxas de crescimento, estrutura etária, sobrevivência, residência, distribuição, padrões de movimento e tamanho da população, que são informações importantes para estudos ecológicos e 
+comportamentais (Wells and Scott., 1990; Wilson et al., 2006; Holmberg et al., 2009; Bjorndal et al., 2013). A identificação fotográfica é um método de marcação e recaptura não invasivo e de baixo custo.
+Os métodos de Foto-ID desenvolvidos para tartarugas marinhas utilizam 
+principalmente a comparação visual de fotografias dos perfis faciais (Rodriguez &  Martinez., 2000; Reisser et al., 2008; Schofield et al., 2008). 
+O uso das duas laterais da cabeça das tartarugas assegura uma caracterização  mais detalhada e efetiva (Jean et al., 2010), entretanto, caso as duas laterais não estejam disponíveis, é importante considerar essa limitação para a contagem dos indivíduos (Su et al., 2015).
+
+Esse banco de dados é de um resultado de um projeto de Ciência cidadã (https://www.instagram.com/mardetartaruga/). Projeto que atua em Arraial do Cabo e em Fernando de Noronha.
+O banco de dados disponibilizado abrange somente a Ilha de Fernando de Noronha.
+
+Os dados podem ser encontrados no [Internet of Turtles](https://iot.wildbook.org/) procurando pelo ID "maria". Para esse trabalho foram extraídos os encontros (avistamento de um único animal em um local e horário específicos) registrados até a abril de 2025.
+
+
+
+#Carregar pacotes
+```{r,results = 'hide', message=FALSE}
+library(readxl)
+library(tidyverse)
+library(stringr)
+library(psych)
+library(lubridate)
+library(plyr)
+library(ggnewscale)
+library(geobr)
+library(readr)
+library(plotly)
+library(ggpubr)
+```
+
+#Definir cores de gráficos e linhas
+```{r,}
+colors <- c ("#2B78E7", "#B6176E", "#efefef")
+colors2 <- c("#7e9700", "#712a78", "#747474")
+colors3 <- c ("#2B78E7", "#B6176E")
+colors4 <- c ("#7e9700", "#712a78")
+```
+#lendo o banco de dados
+```{r,}
+originalenctable <- read_excel("AnnotnExp_2025-04-22.xlsx")
+```
+
+#Deletar colunas ----
+```{r,}
+colnames(originalenctable)
+
+originalenctable <- read_excel("AnnotnExp_2025-04-22.xlsx") %>%
+  select(Name0.value, Occurrence.occurrenceID, Encounter.locationID,
+         Encounter.verbatimLocality, Encounter.year, Encounter.month, Encounter.day, Encounter.genus, 
+         Encounter.specificEpithet, Encounter.occurrenceRemarks,
+         Encounter.mediaAsset0.imageUrl, Annotation0.MatchAgainst,
+         Encounter.mediaAsset1.imageUrl, Annotation1.MatchAgainst)
+
+originalenctable <- originalenctable %>%
+  filter(Encounter.locationID == "Fernando de Noronha")
+```
+
+#Configurando a data. Em caso de ausência do dia, foi padronizado uso do dia 15
+```{r,}
+originalenctable$Encounter.day[originalenctable$Encounter.day==0] <- 15
+originalenctable <- unite(originalenctable, Encounter.year, Encounter.month, Encounter.day, col = "Date", sep = "-")
+originalenctable$Date <- factor(originalenctable$Date)
+originalenctable$Date <- as.Date(originalenctable$Date, format = "%Y-%m-%d")
+```
+
+#Definindo qual(is) lateral(is) os indivíduos têm ao longo do banco de dados
+```{r,}
+tablesides <- originalenctable %>%
+  filter(!is.na(Name0.value)) %>%
+  group_by(Name0.value) %>% 
+  dplyr::mutate(Sides = case_when(any(str_detect(Encounter.occurrenceRemarks,"both")|n_distinct(Encounter.occurrenceRemarks) > 1) ~ 'both',
+                                  TRUE ~ Encounter.occurrenceRemarks )) %>%
+  ungroup
+```
+
+#Definindo quais indivíduos já foram revistos
+```{r,}
+tableresight <- tablesides %>%
+  filter(!is.na(Name0.value)) %>%
+  group_by(Name0.value) %>% 
+  dplyr::mutate(Resight = case_when (any(n_distinct(Occurrence.occurrenceID) > 1) ~ 'yes',
+                                     TRUE~'no'))
+```
+
+#Tabela final com o número total de indivíduos
+```{r,}
+tableturtlesmax <- tableresight %>% 
+  filter(!is.na(Name0.value))
+```
+
+#Número de fotos que foram avaliadas para criar esse banco de dados
+```{r,}
+#Gera uma tabela com a quantidade de fotos de tartarugas com uma lateral
+tableturtlesmax %>%
+  filter(!is.na(Encounter.mediaAsset0.imageUrl)) %>%
+  group_by(Encounter.genus) %>% 
+  dplyr::summarise(n_distinct (Encounter.mediaAsset0.imageUrl))
+#Gera uma tabela com a quantidade de fotos de tartarugas com as duas laterais
+tableturtlesmax %>%
+  filter(!is.na(Encounter.mediaAsset1.imageUrl)) %>%
+  group_by(Encounter.genus) %>% 
+  dplyr::summarise(n_distinct (Encounter.mediaAsset1.imageUrl))
+```
+##Como não possuimos todas as laterais de algumas tartarugas, vamos usar a definição de indivíduos únicos para não superestimar a quantidade de indivíduos.
+#Contando o número de indivíduos distintos para cada espécie, de acordo com a(s) lateral(is) que os indivíduos foram registrados.
+```{r,}
+tableturtlesmax %>%
+  filter(!is.na(Name0.value)) %>%
+  filter(Encounter.genus == "Chelonia") %>%
+  distinct (Name0.value, .keep_all= TRUE) %>% 
+  group_by(Sides) %>% 
+  dplyr::summarise(count = n())
+
+tableturtlesmax %>%
+  filter(!is.na(Name0.value)) %>%
+  filter(Encounter.genus == "Eretmochelys") %>%
+  distinct (Name0.value, .keep_all= TRUE) %>% 
+  group_by(Sides) %>% 
+  dplyr::summarise(count = n())
+```
+
+#Para evitar possível replicação de indivíduos, é preciso selecionar o número mínimo de indivíduos confirmados. Esse número é o valor dos indivíduos identificados que possuem as duas laterais 'both' somado com a lateral que mais possui indivíduos identificados. 
+
+Nesse caso 'right' para C. mydas e 'left' para E. imbricata.
+```{r,}
+tableturtlesmin <-tableturtlesmax %>%
+  filter(!is.na(Name0.value)) %>%
+  filter(Sides %in% c('both', 'right') & Encounter.genus == "Chelonia" | 
+           Sides %in% c('both', 'left') & Encounter.genus == "Eretmochelys")
+```
+
+#indivíduos mínimos confirmados 
+#números de fotos
+```{r,}
+tableturtlesmin %>%
+  filter(!is.na(Encounter.mediaAsset0.imageUrl)) %>%
+  group_by(Encounter.genus, Resight) %>% 
+  dplyr::summarise(n_distinct (Encounter.mediaAsset0.imageUrl))
+
+tableturtlesmin %>%
+  filter(!is.na(Encounter.mediaAsset1.imageUrl)) %>%
+  group_by(Encounter.genus, Resight) %>% 
+  dplyr::summarise(n_distinct (Encounter.mediaAsset1.imageUrl))
+```
+
+#mostra a quantidade de individuos unicos revistos
+```{r,}
+tableturtlesmin %>%
+  filter(!is.na(Encounter.mediaAsset0.imageUrl)) %>%
+  distinct (Name0.value, .keep_all= TRUE) %>% 
+  group_by(Encounter.genus, Resight) %>% 
+  dplyr::summarise(count = n())
+```
+
+#gráfico de individuos unicos revistos
+```{r,}
+tableturtlesmin %>%
+  filter(!is.na(Encounter.mediaAsset0.imageUrl)) %>%
+  distinct(Name0.value, .keep_all = TRUE) %>% 
+  filter(Resight == "yes") %>%
+  group_by(Encounter.genus) %>% 
+  dplyr::summarise(count = n()) %>%
+  ggplot(aes(x = Encounter.genus, y = count, fill = Encounter.genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Chelonia" = "#2b78e7ff", "Eretmochelys" = "#b6176eff")) +
+  labs(x = "Encounter Genus", y = "Count", fill = "Gênero de Encontro") +
+  theme_minimal()
+
+tableturtlesmin %>%
+  filter(!is.na(Encounter.mediaAsset1.imageUrl )) %>%
+  group_by(Encounter.genus, Resight) %>% 
+  dplyr::summarise(n_distinct (Encounter.mediaAsset1.imageUrl ))
+```
+
+#Filtrar indivíduos revistos
+```{r,}
+turtlesresighted <- tableturtlesmin %>%
+  dplyr::filter(Resight == "yes")
+```
+#Fotos por mês, intervalo de visualização e filtro de indivíduos
+```{r,}
+table_sum <- turtlesresighted %>%
+  group_by(Date, Name0.value, Encounter.genus) %>%
+  dplyr::summarise(count = n()) %>% 
+  mutate_at(vars(count), funs(factor))
+
+table_range <- table_sum %>%
+  group_by(Name0.value, Encounter.genus) %>%
+  dplyr::summarise(min = min(Date),
+                   max = max(Date)) %>% 
+  ungroup() %>% 
+  mutate(diff_dias=max-min) %>% 
+  mutate(diff_meses=diff_dias/(365.25/12)) %>%
+  mutate(diff_anos=diff_dias/(365)) %>%
+  mutate_at(vars(diff_meses,diff_anos), round, 1) %>%
+  mutate_if(is.difftime,as.numeric)
+
+str(turtlesresighted)
+```
+# 1. Criar a coluna Date a partir de ano, mês e dia
+```{r,}
+table_sum <- turtlesresighted %>%
+  group_by(Date, Name0.value, Encounter.genus) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(count = as.factor(count))
+```
+# 2. Calcular o intervalo entre primeiros e últimos registros por indivíduo
+```{r,}
+table_range <- table_sum %>%
+  group_by(Name0.value, Encounter.genus) %>%
+  summarise(
+    min = min(Date, na.rm = TRUE),
+    max = max(Date, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    diff_dias = as.numeric(difftime(max, min, units = "days")),
+    diff_meses = round(diff_dias / (365.25 / 12), 1),
+    diff_anos = round(diff_dias / 365, 1)
+  )
+```
+
+#MEDIANA EM ANOS (Verifica o intervalo de tempo que as tartarugas foram revistas)
+```{r,}
+describeBy(table_range$diff_anos, table_range$Encounter.genus)
+
+median <- ddply(table_range, .(Encounter.genus), summarise, median = median(diff_anos))
+```
+## histogram (mostra o intervalo entre os encontros com a mediana)
+```{r,}
+ggplot(table_range, aes(x=diff_anos)) + 
+  geom_histogram(binwidth= 1, boundary = 0,closed= "left", aes(fill=Encounter.genus, color=Encounter.genus))+
+  scale_fill_manual(values = colors3)+
+  scale_color_manual(values = colors4)+
+  scale_y_continuous(name = "Turtles",breaks = seq(0, 50, 2), expand = c(0,0,0,3))+
+  scale_x_continuous(name= "Interval (years)",breaks = 1:15)+
+  geom_vline(data=median, aes(xintercept=median),
+             linetype="dashed")+
+  facet_grid (rows = vars(Encounter.genus),scales = "free", space = "free")
+```
+#Referências:
+
+Bjorndal, k.a., j. Parsons, w. Mustin, and a.b. Bolten. (2013). Threshold 
+to maturity in a long-lived reptile: interactions of age, size, and growth. Marine 
+Biology 160:607–616.
+
+Holmberg, j., b. Norman, and z. Arzoumanian. (2009). Estimating population size, structure, and residency time for Whale Sharks Rhincodon typus through collaborative photo-identification. Endangered Species 
+Research 7:39–53. 
+
+Jean, C. Ciccione, S. Talma, E. Ballorain, K. & Bourjea, J. (2010) Photoidentification method for green and hawksbill turtles - first results from 
+Reunion. Indian Ocean Turtle Newsletter, v. 11, p. 8-13
+
+Reisser, J. Proietti, M. Kinas, P. & Sazina, I. (2008). Photographic identification of sea turtles: method description and validation, with an estimation of tag loss. Endangered Species Research. Vol. 5 pp. 73 - 82. 
+
+Rodriguez, P.H. & L.S. Martinez. (2000). Estimation of leatherback nesting females in Mexiquillo Beach during 1995 - 1996 and 1996 - 1997 nestingseason using pit tags and photo-identification. In: International Symposium 
+on Sea Turtle Biology and Conservation.
+
+Schofield, G. et al. (2008) Investigating the viability of photo-identification as an 
+objective tool to study endangered sea turtle populations. Journal of 
+Experimental Marine Biology and Ecology, v. 360, n. 2, p. 103-108.
+
+Su, C.M., C.T. Huang, AND I.J. Cheng. (2015). Applying a fast, effective and reliable photographic identification system for Green Turtles in the waters near Luichiu Island, Taiwan. Journal of Experimental Marine Biology and Ecology 467:115–120. 
+
+Wells, R.S., and M.D. Scott. (1990). Estimating Bottlenose Dolphin population 
+parameters from individual identification and capture-release techniques. 
+Report of the International Whaling Commission Special Issue 12:407–415.
+
+Wilson, S.G., J.J. Polovina, b.s. Stewart, and m.g. Meekan. (2006). Movements of Whale Sharks (Rhincodon typus) tagged at Ningaloo Reef,  Western Australia. Marine Biology 148:1157–1166. 
